@@ -61,16 +61,16 @@ jobs:
           version: ${{ matrix.docker }}
       - name: Set up Docker BuildX
         run: |
-          mkdir -p ~/.docker/cli-plugins/
-          curl -o ~/.docker/cli-plugins/docker-buildx https://github.com/docker/buildx/releases/download/v0.12.1/buildx-v0.12.1.linux-amd64
-          chmod +x ~/.docker/cli-plugins/docker-buildx
+          #mkdir -p ~/.docker/cli-plugins/
+          #curl -o ~/.docker/cli-plugins/docker-buildx https://github.com/docker/buildx/releases/download/${{ matrix.buildx }}/buildx-${{ matrix.buildx }}.linux-amd64
+          #chmod +x ~/.docker/cli-plugins/docker-buildx
       - name: Run Integration tests
         run: |
           docker version
-          mvn package docker:build
-          mvn docker:push -Ddocker.username=$DOCKER_USERNAME -Ddocker.password=$DOCKER_PASSWORD
+          mvn package docker:build -Punix
+          mvn docker:push -Ddocker.username=$DOCKER_USERNAME -Ddocker.password=$DOCKER_PASSWORD -Punix
   macos-build:
-    name: MacOS M1 Build With Maven 
+    name: MacOS Build With Maven 
     needs: buildWithoutTests
     runs-on: macos-13
     strategy:
@@ -78,6 +78,7 @@ jobs:
       matrix:
         java: [17]
         docker: [v25.0.2,v24.0.9,v23.0.6,v20.10.24]
+        #buildx: [v0.12.1,v0.12.0,v0.11.2,v0.10.4]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -103,8 +104,30 @@ jobs:
         run: |
           export DOCKER_HOST=unix:///Users/runner/.colima/default/docker.sock 
           system_profiler SPSoftwareDataType SPHardwareDataType
-          docker buildx ls
-          docker version
-          docker -h
-          mvn package docker:build
-          mvn docker:push -Ddocker.username=$DOCKER_USERNAME -Ddocker.password=$DOCKER_PASSWORD
+          uname -a
+
+          mvn package docker:build -Punix
+          mvn docker:push -Ddocker.username=$DOCKER_USERNAME -Ddocker.password=$DOCKER_PASSWORD -Punix
+  windows-build:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - name: Get Windows Version > Used to retrieve specific Docker Image
+        shell: cmd
+        run: |
+          ver
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: '17' 
+      - name: Clone DMP 
+        run: |
+          git config --system core.longpaths true
+          git clone $env:DMP_REPOSITORY --branch $env:DMP_REVISION docker-maven-plugin
+      - name: Install DMP 
+        run: mvn ${MAVEN_ARGS} -f "docker-maven-plugin/pom.xml" clean install -DskipTests
+      - name: Run Integration tests
+        run: |
+          mvn package docker:build -Pwindows

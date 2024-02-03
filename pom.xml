@@ -52,30 +52,6 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>io.fabric8</groupId>
-        <artifactId>docker-maven-plugin</artifactId>
-        <version>${docker-maven-plugin.version}</version>
-        <configuration>
-          <images>
-            <image>
-              <name>ghcr.io/${docker.user}/%a:${project.version}</name>
-              <build>
-                <from>azul/zulu-openjdk-alpine:17-jre</from>
-                <assembly>
-                  <descriptorRef>artifact</descriptorRef>
-                </assembly>
-                <buildx>
-                  <platforms>
-                    <platform>linux/amd64</platform>
-                    <platform>linux/arm64</platform>
-                  </platforms>
-                </buildx>
-              </build>
-            </image>
-          </images>
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>${quarkus.platform.group-id}</groupId>
         <artifactId>quarkus-maven-plugin</artifactId>
         <version>${quarkus.platform.version}</version>
@@ -132,16 +108,60 @@
   </build>
   <profiles>
     <profile>
-      <id>native</id>
-      <activation>
-        <property>
-          <name>native</name>
-        </property>
-      </activation>
-      <properties>
-        <skipITs>false</skipITs>
-        <quarkus.package.type>native</quarkus.package.type>
-      </properties>
+      <id>unix</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <version>${docker-maven-plugin.version}</version>
+            <configuration>
+              <images>
+                <image>
+                  <name>ghcr.io/${docker.user}/%a:${project.version}</name>
+                  <build>
+                    <from>azul/zulu-openjdk-alpine:17-jre</from>
+                    <assembly>
+                      <descriptorRef>artifact</descriptorRef>
+                    </assembly>
+                    <buildx>
+                      <platforms>
+                        <platform>linux/amd64</platform>
+                        <platform>linux/arm64</platform>
+                      </platforms>
+                    </buildx>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>windows</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <version>${docker-maven-plugin.version}</version>
+            <configuration>
+              <images>
+                <image>
+                  <name>ghcr.io/${docker.user}/%a:${project.version}</name>
+                  <build>
+                    <from>mcr.microsoft.com/windows/nanoserver:ltsc2022</from>
+                    <assembly>
+                      <descriptorRef>artifact</descriptorRef>
+                    </assembly>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+          </plugin> 
+        </plugins>
+      </build>
     </profile>
   </profiles>
 </project>

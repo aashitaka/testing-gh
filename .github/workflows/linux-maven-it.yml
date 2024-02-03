@@ -61,13 +61,16 @@ jobs:
           version: ${{ matrix.docker }}
       - name: Set up Docker BuildX
         run: |
-          mkdir -p ~/.docker/cli-plugins/
-          curl -o ~/.docker/cli-plugins/docker-buildx https://github.com/docker/buildx/releases/download/v0.12.1/buildx-v0.12.1.linux-amd64
-          chmod +x ~/.docker/cli-plugins/docker-buildx
+          #mkdir -p ~/.docker/cli-plugins/
+          #curl -o ~/.docker/cli-plugins/docker-buildx https://github.com/docker/buildx/releases/download/${{ matrix.buildx }}/buildx-${{ matrix.buildx }}.linux-amd64
+          #chmod +x ~/.docker/cli-plugins/docker-buildx
+      - name: Clone DMP 
+        run: |
+          rm -rf docker-maven-plugin \
+          && git clone "$DMP_REPOSITORY" --branch "$DMP_REVISION" docker-maven-plugin
       - name: Run Integration tests
         run: |
-          mvn package docker:build
-          mvn docker:push -Ddocker.username=$DOCKER_USERNAME -Ddocker.password=$DOCKER_PASSWORD
+          mvn clean install -f "docker-maven-plugin/it/pom.xml"
   macos-build:
     name: MacOS
     needs: buildWithoutTests
@@ -102,5 +105,6 @@ jobs:
         run: |
           docker buildx ls
           docker version
+          uname -a
           export DOCKER_HOST=unix:///Users/runner/.colima/default/docker.sock 
           mvn clean install -f "docker-maven-plugin/it/pom.xml"

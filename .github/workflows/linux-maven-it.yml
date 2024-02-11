@@ -1,4 +1,4 @@
-name: Docker BuildX Build + Push E2E Tests 
+name: DMP Integration Tests 
 
 env:
   MAVEN_ARGS: -B -C -V -ntp -Dhttp.keepAlive=false -e
@@ -6,7 +6,6 @@ env:
   DMP_REVISION: master
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-  DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
 
 on:
   workflow_dispatch:
@@ -35,54 +34,15 @@ jobs:
           && git clone "$DMP_REPOSITORY" --branch "$DMP_REVISION" docker-maven-plugin
       - name: Install DMP 
         run: mvn ${MAVEN_ARGS} -f "docker-maven-plugin/pom.xml" clean install -DskipTests -Djacoco.skip=true
-  linux-build:
-    name: Linux Build Push 
+  linuxBuild:
+    name: Linux
     needs: buildWithoutTests
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         java: [17]
-        docker: [25.0.2,24.0.9,23.0.6,20.10.24]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Cache .m2 registry
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: cache-e2e-${{ github.sha }}-${{ github.run_id }}
-      - name: Setup Java
-        uses: actions/setup-java@v1
-        with:
-          java-version: ${{ matrix.java }}
-      - name: Set up Docker
-        uses: crazy-max/ghaction-setup-docker@v2
-        with:
-          version: v${{ matrix.docker }}
-      - name: Set up Docker BuildX
-        run: |
-          #mkdir -p ~/.docker/cli-plugins/
-          #curl -o ~/.docker/cli-plugins/docker-buildx https://github.com/docker/buildx/releases/download/${{ matrix.buildx }}/buildx-${{ matrix.buildx }}.linux-amd64
-          #chmod +x ~/.docker/cli-plugins/docker-buildx
-      - name: Run Integration tests
-        run: |
-          # Workaround for https://github.com/docker/for-linux/issues/748
-          DOCKER_INSTALL_PATH=`which docker`
-          sudo cp $DOCKER_INSTALL_PATH-init /sbin/docker-init
-          docker version
-          mvn package docker:build -Punix
-          mvn docker:push -Ddocker.username=$DOCKER_USERNAME -Ddocker.password=$DOCKER_PASSWORD -Punix
-  macos-build:
-    name: MacOS Build With Maven 
-    needs: buildWithoutTests
-    runs-on: macos-13
-    strategy:
-      fail-fast: false
-      matrix:
-        java: [17]
         docker: [v25.0.2,v24.0.9,v23.0.6,v20.10.24]
-        #buildx: [v0.12.1,v0.12.0,v0.11.2,v0.10.4]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -99,6 +59,43 @@ jobs:
         uses: crazy-max/ghaction-setup-docker@v2
         with:
           version: ${{ matrix.docker }}
+      - name: Set up Docker BuildX
+        run: |
+          #mkdir -p ~/.docker/cli-plugins/
+          #curl -o ~/.docker/cli-plugins/docker-buildx https://github.com/docker/buildx/releases/download/${{ matrix.buildx }}/buildx-${{ matrix.buildx }}.linux-amd64
+          #chmod +x ~/.docker/cli-plugins/docker-buildx
+      - name: Clone DMP 
+        run: |
+          rm -rf docker-maven-plugin \
+          && git clone "$DMP_REPOSITORY" --branch "$DMP_REVISION" docker-maven-plugin
+      - name: Run Integration tests
+        run: |
+          mvn clean install -f "docker-maven-plugin/it/pom.xml"
+  macos-build:
+    name: MacOS
+    needs: buildWithoutTests
+    runs-on: macos-13
+    strategy:
+      matrix:
+        java: [17]
+        docker: [v25.0.2,v24.0.9,v23.0.6,v20.10.24]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.java }}
+      - name: Set up Docker
+        uses: crazy-max/ghaction-setup-docker@v2
+        with:
+          version: ${{ matrix.docker }}
+      - name: Clone DMP
+        run: |
+          rm -rf docker-maven-plugin \
+          && git clone "$DMP_REPOSITORY" --branch "$DMP_REVISION" docker-maven-plugin
+      - name: Install DMP 
+        run: mvn ${MAVEN_ARGS} -f "docker-maven-plugin/pom.xml" clean install -DskipTests -Djacoco.skip=true
       - name: Set up Docker Buildx
         run: |
           brew install docker-buildx
@@ -106,32 +103,8 @@ jobs:
           ln -sfn /usr/local/opt/docker-buildx/bin/docker-buildx ~/.docker/cli-plugins/docker-buildx
       - name: Run Integration tests
         run: |
-          export DOCKER_HOST=unix:///Users/runner/.colima/default/docker.sock 
-          system_profiler SPSoftwareDataType SPHardwareDataType
+          docker buildx ls
+          docker version
           uname -a
-
-          mvn package docker:build -Punix
-          mvn docker:push -Ddocker.username=$DOCKER_USERNAME -Ddocker.password=$DOCKER_PASSWORD -Punix
-  windows-build:
-    name: Windows
-    runs-on: windows-latest
-    steps:
-      - name: Get Windows Version > Used to retrieve specific Docker Image
-        shell: cmd
-        run: |
-          ver
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup Java
-        uses: actions/setup-java@v1
-        with:
-          java-version: '17' 
-      - name: Clone DMP 
-        run: |
-          git config --system core.longpaths true
-          git clone $env:DMP_REPOSITORY --branch $env:DMP_REVISION docker-maven-plugin
-      - name: Install DMP 
-        run: mvn ${MAVEN_ARGS} -f "docker-maven-plugin/pom.xml" clean install -DskipTests
-      - name: Run Integration tests
-        run: |
-          mvn package docker:build -Pwindows
+          export DOCKER_HOST=unix:///Users/runner/.colima/default/docker.sock 
+          mvn clean install -f "docker-maven-plugin/it/pom.xml"

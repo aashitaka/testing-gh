@@ -5,6 +5,18 @@
   <groupId>io.fabric8.testing</groupId>
   <artifactId>dmp-buildx-build-push-testing</artifactId>
   <version>1.0.0-SNAPSHOT</version>
+
+  <pluginRepositories>
+      <pluginRepository>
+          <id>oss.sonatype.org</id>
+          <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+          <snapshots>
+              <enabled>true</enabled>
+              <updatePolicy>always</updatePolicy>
+          </snapshots>
+      </pluginRepository>
+  </pluginRepositories>
+
   <properties>
     <compiler-plugin.version>3.12.1</compiler-plugin.version>
     <maven.compiler.release>17</maven.compiler.release>
@@ -15,7 +27,7 @@
     <quarkus.platform.version>3.7.1</quarkus.platform.version>
     <skipITs>true</skipITs>
     <surefire-plugin.version>3.2.5</surefire-plugin.version>
-    <docker-maven-plugin.version>0.44-SNAPSHOT</docker-maven-plugin.version>
+    <docker-maven-plugin.version>0.44.0</docker-maven-plugin.version>
     <docker.user>${env.DOCKER_USERNAME}</docker.user>
     <docker.registry>${env.DOCKER_REGISTRY}</docker.registry>
   </properties>

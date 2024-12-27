@@ -22,6 +22,6 @@ jobs:
     - name: Perform sed replacement
       run: |
         ls
-        sed -i"" 's/example/modified/' example.txt
+        sed -i"" s/example/modified/ example.txt
         cat example.txt 
         ls
